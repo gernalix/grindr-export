@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+
+# Never commit personal Grindr export data.
+grindr_archive/
+archives/
+exports/
+raw/
+media/
+messages.json
+messages.csv
+archive.sqlite
+archive.sqlite-*
+index.html
+acquisition_summary.json
