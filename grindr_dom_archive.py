@@ -277,7 +277,7 @@ def main():
     sender_counts = Counter(row["sender"] for row in rows)
     boundary_observed, boundary_evidence = oldest_boundary_info(data, snapshot)
     metadata = {
-        "source": "Grindr Web UI via Google Chrome incognito DOM/pageAssets",
+        "source": "Grindr Web UI via Google Chrome DOM/pageAssets",
         "chat_name": chat_name,
         "source_url": snapshot.get("url"),
         "exported_at": exported_at,
