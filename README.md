@@ -9,6 +9,8 @@ The repository deliberately separates two phases:
 
 It does **not** store cookies, login tokens, session secrets, or signed asset query strings. Media download is best-effort and only uses assets normally exposed by the browser. Private albums or protected/unavailable media remain recorded as non-exportable.
 
+Some current Grindr Web chats omit the textual history-start marker. Acquisition remains fail-closed: a missing marker is accepted only when the collector records `oldestBoundaryReached` plus `oldestBoundaryEvidence` showing at least two reverse-scroll probes with unchanged `scrollTop` and `scrollHeight` (`method: "reverse-scroll-stable"`).
+
 ## Requirements
 
 - Fedora/Linux with Python 3 available globally.

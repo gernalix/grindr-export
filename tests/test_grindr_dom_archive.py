@@ -139,6 +139,31 @@ class GrindrArchiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at least one snapshot"):
             archive.choose_snapshot({"snapshots": []})
 
+    def test_history_start_marker_passes(self):
+        snapshot = {"startMarkerPresent": True}
+        self.assertTrue(archive.history_start_verified({"snapshots": [snapshot]}, snapshot))
+
+    def test_verified_oldest_boundary_passes_without_marker(self):
+        snapshot = {"startMarkerPresent": False}
+        data = {
+            "snapshots": [snapshot],
+            "oldestBoundaryReached": True,
+            "oldestBoundaryEvidence": {
+                "method": "reverse-scroll-stable",
+                "repeatedAttempts": 2,
+                "scrollTop": -3625.6,
+                "scrollHeight": 4254,
+                "scrollTopStable": True,
+                "scrollHeightStable": True,
+            },
+        }
+        self.assertTrue(archive.history_start_verified(data, snapshot))
+
+    def test_missing_marker_and_unverified_boundary_fails(self):
+        snapshot = {"startMarkerPresent": False}
+        data = {"snapshots": [snapshot], "oldestBoundaryReached": True}
+        self.assertFalse(archive.history_start_verified(data, snapshot))
+
 
 if __name__ == "__main__":
     unittest.main()

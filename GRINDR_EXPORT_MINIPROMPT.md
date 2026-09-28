@@ -8,6 +8,8 @@ Use Codex Desktop Chrome control on the existing Grindr tab. Acquire the chat wi
 
 Each snapshot must preserve, for every visible chat child, the text/innerText, outer rectangle, bubble rectangle and text when present, images/videos with redacted URL paths, role/aria metadata, and `startMarkerPresent`. Preserve the page URL/title and `exportedAt`. Do not store cookies, auth headers, tokens, session secrets, or signed URL query strings.
 
+If Grindr omits the start-marker text, do not infer completion from its absence. Only record `oldestBoundaryReached: true` with `oldestBoundaryEvidence` when repeated reverse-scroll attempts (at least two) leave both `scrollTop` and `scrollHeight` unchanged. The evidence must use `method: "reverse-scroll-stable"` and include `repeatedAttempts`, `scrollTop`, `scrollHeight`, `scrollTopStable: true`, and `scrollHeightStable: true`.
+
 Use `pageAssets` only for browser-observed image/video assets that can be bundled normally. If an asset or private album cannot be exported normally, record it as non-exportable and continue; do not bypass Grindr protections.
 
 After acquisition, run:
