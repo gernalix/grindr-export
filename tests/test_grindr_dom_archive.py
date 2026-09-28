@@ -143,7 +143,7 @@ class GrindrArchiveTests(unittest.TestCase):
         snapshot = {"startMarkerPresent": True}
         self.assertTrue(archive.history_start_verified({"snapshots": [snapshot]}, snapshot))
 
-    def test_verified_oldest_boundary_passes_without_marker(self):
+    def test_reverse_scroll_stability_without_marker_fails(self):
         snapshot = {"startMarkerPresent": False}
         data = {
             "snapshots": [snapshot],
@@ -157,7 +157,7 @@ class GrindrArchiveTests(unittest.TestCase):
                 "scrollHeightStable": True,
             },
         }
-        self.assertTrue(archive.history_start_verified(data, snapshot))
+        self.assertFalse(archive.history_start_verified(data, snapshot))
 
     def test_missing_marker_and_unverified_boundary_fails(self):
         snapshot = {"startMarkerPresent": False}

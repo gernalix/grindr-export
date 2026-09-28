@@ -72,25 +72,15 @@ def choose_snapshot(data):
 
 
 def oldest_boundary_info(data, snapshot):
-    """Return a fail-closed proof that the oldest available DOM point was reached."""
+    """Return collector observations without treating them as completion proof."""
     source = snapshot if snapshot.get("oldestBoundaryReached") else data
     evidence = source.get("oldestBoundaryEvidence")
-    verified = (
-        bool(source.get("oldestBoundaryReached"))
-        and isinstance(evidence, dict)
-        and evidence.get("method") == "reverse-scroll-stable"
-        and evidence.get("repeatedAttempts", 0) >= 2
-        and evidence.get("scrollTopStable") is True
-        and evidence.get("scrollHeightStable") is True
-        and isinstance(evidence.get("scrollTop"), (int, float))
-        and isinstance(evidence.get("scrollHeight"), (int, float))
-    )
-    return bool(source.get("oldestBoundaryReached")), verified, evidence
+    return bool(source.get("oldestBoundaryReached")), evidence
 
 
 def history_start_verified(data, snapshot):
-    _, boundary_verified, _ = oldest_boundary_info(data, snapshot)
-    return bool(snapshot.get("startMarkerPresent")) or boundary_verified
+    """Only the terminal Grindr UI marker proves a complete history."""
+    return bool(snapshot.get("startMarkerPresent"))
 
 
 def load_media_map(archive_dir):
@@ -285,7 +275,7 @@ def main():
         return 1
     chat_name = archive_dir.name.rsplit("_", 1)[0].replace("_", " ")
     sender_counts = Counter(row["sender"] for row in rows)
-    boundary_reached, boundary_verified, boundary_evidence = oldest_boundary_info(data, snapshot)
+    boundary_observed, boundary_evidence = oldest_boundary_info(data, snapshot)
     metadata = {
         "source": "Grindr Web UI via Google Chrome incognito DOM/pageAssets",
         "chat_name": chat_name,
@@ -293,8 +283,8 @@ def main():
         "exported_at": exported_at,
         "archive_dir": str(archive_dir),
         "start_marker_present": bool(snapshot.get("startMarkerPresent")),
-        "oldest_boundary_reached": boundary_reached,
-        "oldest_boundary_verified": boundary_verified,
+        "oldest_boundary_observed": boundary_observed,
+        "oldest_boundary_verified": bool(snapshot.get("startMarkerPresent")),
         "oldest_boundary_evidence": boundary_evidence,
         "messages": len(rows),
         "images_saved": sum(1 for m in media if m["kind"] == "image"),
