@@ -1,6 +1,7 @@
 # Pixel: selezione chat e limite della cronologia
 
-P90, project 106. Le issue #4 e #6 restano aperte fino alla verifica fisica.
+P90, project 106. La verifica Web P110 è riuscita nell'ambito sotto dichiarato;
+la prova fisica Android resta non eseguita e le issue #4 e #6 restano aperte.
 Questo documento non autorizza API private, accesso al database dell'app o
 aggiramenti di protezioni. Le acquisizioni esistenti non vanno rigenerate.
 
@@ -120,6 +121,66 @@ Il flusso Web può proseguire su una scheda disponibile al controllo supportato,
 con la normale autenticazione autorizzata e il solo boundary Secret Service.
 I gate P90 restano BLOCKED fino a selezione live e prova autorevole del limite;
 P91 rimane dipendente. Nessun archivio è stato rinormalizzato o sostituito.
+
+## Ripresa P108/P110: selezione e confine Web verificati
+
+P110 (parent P90), body SHA256
+`41615bfc5f426d8d6693c8c9599cc94fffa587b4affc84b922944e728fcba4f0`,
+VALID, stessa chat canonica; policy corrente verificata
+`79f9fd869c336d4ec4d843e6be2b56624852777e`.
+Il Pixel è occupato e completamente escluso; nessuna operazione sul device,
+notifica, nuova chat/worker o integrazione PersonalHub. P91 non è stato avviato.
+
+La seconda scheda Chrome autorizzata ha riusato la sessione autenticata senza
+leggere credenziali. La scheda assegnata ad altro controller non è stata sottratta.
+P110 autorizza una conversazione attuale normalmente accessibile, distinta dal
+vecchio archivio: il nome storico non è un identificativo persistente.
+
+Procedura Web riprodotta: individuare il pulsante con un unico nome esatto nella
+lista visibile, verificarne unicità/visibilità, aprire e verificare l'intestazione.
+Tornare tramite i link UI Home → Chat, attendere il segnaposto di selezione,
+ritrovare lo stesso pulsante univoco e riaprire; attendere il contenitore messaggi.
+Entrambe le aperture hanno mostrato la stessa intestazione. Nessun ID nativo è
+esposto nell'URL `/chat` o nell'intestazione osservata: non è stato inventato un
+ID o un collegamento alla chat storica. Il nome univoco vale per la sessione del
+test; omonimia/rinomina richiede nuova disambiguazione, non una corrispondenza
+silenziosa con vecchi dati.
+
+Prova live del 2026-10-12: alla prima apertura 6 figli, senza marker; uno scroll
+UI verso i messaggi precedenti lasciava altezza/posizione invariate, senza prova
+terminale. Alla seconda apertura, alle 21:44:18 UTC, 7 figli e il marker letterale
+`Start of Grindr Web chat history`, visibile e senza loader visibile pendente.
+Il marker è stato verificato nel DOM e in screenshot. Il passaggio 6 → 7, senza
+variazione di `scrollHeight` (667), dimostra sul caso reale perché la stabilità
+non deve diventare PASS. Uno scroll è passato dalla capability CDP supportata
+della scheda, soltanto come input UI ordinario; nessun accesso a stato nascosto,
+credenziali, rete o API private Grindr.
+
+Provenienza privata separata dal vecchio archivio:
+`/home/daniele/.local/state/pn-review-20261012/resume-current/P110-Web-proof.o3eH05/`.
+Receipt e snapshot sono privati, fuori Git; la prova pubblica contiene solo fatti
+tecnici, non nomi, contenuti chat o media.
+
+- `raw/dom_snapshots.json`: SHA256
+  `8d424019fb982ef33e01b797df74e40286ba83888c2bb7ef9881fc45cd214d0c`.
+- Screenshot del solo marker `start-marker.jpg`: SHA256
+  `928dd83813f5d8b2f8d214f0d1f343dcf21dd123a3b9b4fc7abf25b2fea6819d`.
+- I 23 file storici conservano il fingerprint aggregato
+  `3d96e20480d06d7a9c63db0831715cf7ab486694863b17e62084a3989070488b`.
+  Il record storico di 65 figli resta conservato nelle issue; la posizione del
+  suo raw è ancora non dimostrata. Nessun vecchio dato è stato modificato.
+
+Esito: selezione Web riproducibile e confine dichiarato dal client Web VERIFICATI.
+Questo non dimostra il limite Android o dati mai conservati/cancellati, né rende
+il normalizzatore un verificatore Pixel. Il fallback Android documentato resta
+disponibile, ma non è stato esercitato due volte sul device; P90 complessivo resta
+PARTIAL, senza promuovere questi fatti Web a PASS fisico. Non occorre una modifica
+al normalizzatore o ripetere i sette test già passati sul codice invariato.
+
+Next action corrente: soltanto dopo nuova disponibilità esclusiva del Pixel,
+verificare selezione/fallback e criterio terminale del client Android. La scheda
+Web e il checkpoint privato restano recuperabili; non ripetere polling sul Pixel
+occupato né avviare P91 sulla sola prova Web.
 
 ## Fonti ufficiali consultate
 
