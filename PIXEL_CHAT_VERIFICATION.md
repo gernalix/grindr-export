@@ -83,6 +83,44 @@ Next action: confermare la chat e disponibilità esclusiva del Pixel, eseguire
 due aperture supportate e acquisire una prova autorevole del confine Android.
 Conservare separatamente il raw storico di 65 figli se l'utente ne indica il path.
 
+## Ripresa P94: disponibilità confermata, connessione interrotta
+
+L'utente ha confermato il Pixel libero e chiesto di provare prima Android.
+La conversazione di riferimento va ricavata dall'acquisizione più recente già
+presente nel progetto, evitando una nuova domanda ambigua sul nome della chat.
+Il flusso Web esistente è quello di `GRINDR_EXPORT_MINIPROMPT.md` e
+`grindr_dom_archive.py`; non occorre inventare un nuovo exporter.
+
+Receipt P94 VALID: body SHA256
+`5074ed63bd89f72494e98cf7a8af5d27e97dd3579c4c58f5094e1b3d053bf038`,
+parent P90, stesso UUID, policy verificata
+`81bf07a8d40203d0e32ddfa4ba7d547f99a6c62c`, capability
+`pn-remote-bootstrap-v1`.
+
+Il gate ha inizialmente verificato Google Pixel 8a e Grindr nel profilo 0;
+subito dopo ADB ha perso la connessione, prima di qualsiasi azione UI. La
+rivalidazione non ha trovato device; la riconnessione nativa all'endpoint appena
+osservato ha restituito `No route to host`, senza servizi mDNS disponibili.
+Quindi non si può esercitare la selezione né acquisire il limite Android.
+L'esclusività non è più il blocker: è la raggiungibilità fisica del Pixel.
+
+La verifica dell'alternativa Web ha trovato Chrome nel profilo utente e una
+scheda Grindr sulla pagina login. Il controllo supportato della scheda è già
+assegnato a un'altra sessione: non è stato sottratto. Il riferimento credenziali
+Secret Service è presente; nessun valore è stato richiesto, stampato o copiato.
+Gli adapter locali di login preesistenti usano CDP diretto e non sono stati
+eseguiti per scavalcare la sessione di controllo del browser.
+
+Next action corrente: collegare il Pixel via USB e sbloccarlo, oppure ripristinare
+la connessione Wi-Fi già autorizzata; rieseguire il gate d'identità e provare la
+conversazione dell'acquisizione esistente. Se la tree non espone la riga, il gesto
+manuale è aprire Grindr → Inbox → la stessa conversazione e lasciare la chat
+aperta: consente di verificare l'intestazione senza coordinate inventate.
+Il flusso Web può proseguire su una scheda disponibile al controllo supportato,
+con la normale autenticazione autorizzata e il solo boundary Secret Service.
+I gate P90 restano BLOCKED fino a selezione live e prova autorevole del limite;
+P91 rimane dipendente. Nessun archivio è stato rinormalizzato o sostituito.
+
 ## Fonti ufficiali consultate
 
 - [Chatting with other profiles](https://help.grindr.com/hc/en-us/articles/1500008680921-Chatting-with-other-profiles): accesso alle conversazioni dalla Inbox.
