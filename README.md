@@ -11,6 +11,11 @@ It does **not** store cookies, login tokens, session secrets, or signed asset qu
 
 Some current Grindr Web chats omit the textual history-start marker. Acquisition remains fail-closed: unchanged reverse-scroll position or height may be retained as diagnostic evidence, but cannot establish the oldest history boundary or a passing export. A complete export requires the actual terminal history-start marker in the Grindr UI.
 
+That marker applies to the Web client's history, not proof of the Android
+conversation's absolute beginning. Pixel chat selection, the supported manual
+fallback and the separate Android history gate are documented in
+[PIXEL_CHAT_VERIFICATION.md](PIXEL_CHAT_VERIFICATION.md).
+
 ## Requirements
 
 - Fedora/Linux with Python 3 available globally.

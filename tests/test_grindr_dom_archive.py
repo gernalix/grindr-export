@@ -164,6 +164,27 @@ class GrindrArchiveTests(unittest.TestCase):
         data = {"snapshots": [snapshot], "oldestBoundaryReached": True}
         self.assertFalse(archive.history_start_verified(data, snapshot))
 
+    def test_65_child_capture_is_preserved_without_promoting_scroll_stability(self):
+        with tempfile.TemporaryDirectory() as td:
+            export_dir = self.make_archive(td)
+            raw = export_dir / "raw" / "dom_snapshots.json"
+            data = json.loads(raw.read_text(encoding="utf-8"))
+            snapshot = data["snapshots"][0]
+            snapshot.update(
+                startMarkerPresent=False,
+                childCount=65,
+                children=[child(f"Fixture {n} 2:05 PM", 0) for n in range(65)],
+                oldestBoundaryReached=True,
+                oldestBoundaryEvidence={"method": "reverse-scroll-stable"},
+            )
+            raw.write_text(json.dumps(data), encoding="utf-8")
+            before = raw.read_bytes()
+            _, chosen, rows, _, _ = archive.extract_messages(data, export_dir)
+            self.assertEqual(len(chosen["children"]), 65)
+            self.assertEqual(len(rows), 65)
+            self.assertFalse(archive.history_start_verified(data, chosen))
+            self.assertEqual(raw.read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()
