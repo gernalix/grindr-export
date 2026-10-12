@@ -1,0 +1,31 @@
+{
+  "contract_version": "megavault.command/v1",
+  "project_id": 106,
+  "owner": "grindr-export",
+  "commands": [
+    {
+      "key": "discovered_grindr_dom_archive_py",
+      "host_scope": "H0001",
+      "entrypoint": "python3",
+      "argv": ["grindr_dom_archive.py", "{archive_root}"],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "archive_root": {
+            "type": "path",
+            "description": "Existing private archive root to normalize"
+          }
+        },
+        "required": ["archive_root"],
+        "additionalProperties": false
+      },
+      "working_directory": ".",
+      "prerequisites": ["Existing acquisition snapshot with terminal history evidence"],
+      "timeout_seconds": 3600,
+      "idempotency": "non_idempotent",
+      "risk": "high",
+      "state": "disabled",
+      "description": "Normalize an existing private Grindr DOM archive; disabled pending per-run path and privacy review."
+    }
+  ]
+}
