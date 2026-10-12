@@ -1,0 +1,47 @@
+{
+  "action": "upsert",
+  "contract_version": "megavault.command/v1",
+  "event_id": "CE-ac82f391d011650123253e8c906aa829",
+  "occurred_at": "2026-10-12T21:16:23.823773+00:00",
+  "operation_key": "discovered_grindr_dom_archive_py",
+  "payload": {
+    "argv": [
+      "grindr_dom_archive.py",
+      "{archive_root}"
+    ],
+    "contract_version": "megavault.command/v1",
+    "description": "Normalize an existing private Grindr DOM archive; disabled pending per-run path and privacy review.",
+    "entrypoint": "python3",
+    "host_scope": "H0001",
+    "idempotency": "non_idempotent",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "archive_root": {
+          "description": "Existing private archive root to normalize",
+          "type": "path"
+        }
+      },
+      "required": [
+        "archive_root"
+      ],
+      "type": "object"
+    },
+    "key": "discovered_grindr_dom_archive_py",
+    "owner": "grindr-export",
+    "prerequisites": [
+      "Existing acquisition snapshot with terminal history evidence"
+    ],
+    "project_id": 106,
+    "risk": "high",
+    "source_digest": "f90c6a88b8d4a61aa981d4009b71a71f751b809e932b3b2ca8c4fc5ddc0bf156",
+    "source_ref": "/home/daniele/.local/share/codex-github-autosync/worktrees/gernalix_grindr-export/P104/.megavault/commands-v1.json",
+    "state": "disabled",
+    "timeout_seconds": 3600,
+    "working_directory": "."
+  },
+  "payload_sha256": "f90c6a88b8d4a61aa981d4009b71a71f751b809e932b3b2ca8c4fc5ddc0bf156",
+  "project_id": 106,
+  "source_commit": "7d339968bafa344764a02b45e74c768458b6c8d7",
+  "source_ref": "/home/daniele/.local/share/codex-github-autosync/worktrees/gernalix_grindr-export/P104/.megavault/commands-v1.json"
+}
