@@ -1,7 +1,8 @@
 # Pixel: selezione chat e limite della cronologia
 
-P90, project 106. La verifica Web P110 è riuscita nell'ambito sotto dichiarato;
-la prova fisica Android resta non eseguita e le issue #4 e #6 restano aperte.
+P90, project 106. La verifica Web P110 è riuscita nell'ambito sotto dichiarato.
+P116 ha verificato il fallback manuale Android con due aperture della stessa
+chat (#4); il confine Android resta non dimostrato (#6), quindi P90 è PARTIAL.
 Questo documento non autorizza API private, accesso al database dell'app o
 aggiramenti di protezioni. Le acquisizioni esistenti non vanno rigenerate.
 
@@ -181,6 +182,64 @@ Next action corrente: soltanto dopo nuova disponibilità esclusiva del Pixel,
 verificare selezione/fallback e criterio terminale del client Android. La scheda
 Web e il checkpoint privato restano recuperabili; non ripetere polling sul Pixel
 occupato né avviare P91 sulla sola prova Web.
+
+## Ripresa P116: fallback Android verificato, confine ancora non dimostrato
+
+L'utente ha confermato direttamente `pixel libero`, poi `fatto` e `riaperta`
+per due aperture dall'Inbox. La precedente indisponibilità era superata: dopo
+uno STOP cautelativo il coordinatore ha verificato la conferma umana e corretto
+il proprio stato. Il dispatch audit P115 era errato/cancellato: nessun audit
+MegaVault eseguito nella chat Grindr, nessun cambio di scope o goal sostitutivo.
+
+Receipt P116 create/launch VALID, SHA256
+`853787ab997d38931636041d4d616655f5fba97442569d6203b0a45236a660aa`,
+project106, parent90, gpt-6.1-sol high STRICT, capability
+`pn-remote-bootstrap-v1`; policy verificata
+`9469d3e71499349b697e9544a01ceb4a3e02956e`.
+
+Gate fisico verificato e rivalidato: Google Pixel 8a, Grindr nel profilo 0,
+versione 26.20.0 (187695). Launcher pubblico HomeActivityP35. Inbox raggiunta dal
+controllo `Scheda Posta in arrivo`, con centro derivato dalla UI tree. La tree
+Inbox contiene 24 nodi, nessuna riga della conversazione né container scrollabile:
+il fallback umano è necessario, non una selezione ADB automatica riuscita.
+
+Dopo ciascuna apertura, l'attività ChatActivityV2 e i campi ChatArgs emessi dal
+dump supportato dell'attività hanno identificato la stessa conversationId e
+recipientProfileId nativi, con entryMethod inbox; alla riapertura l'attività è
+verificata in primo piano. Gli ID rimangono nella receipt privata, non sono alias
+PH e non associano questa chat Android al target Web o alla chat storica Fun.
+Il dump UI iniziale e quello dopo la riapertura sono identici, SHA256
+`7599f8faa90f2afc10743cfa049eaf665d7161fdec35b4da941c68ba75d9b0a0`.
+Il metodo manuale documentato è quindi riprodotto: requisito #4 soddisfatto.
+
+Chiusa soltanto la tastiera, con identità rimasta invariata; 33 swipe UI verso il
+passato nel container osservato `[32,268][1048,1880]`, con STOP controllato prima
+degli input e snapshot privati dopo gli scroll. Si sono raggiunti progressivamente
+settembre, agosto e luglio. Gli ultimi tre dump mostrano `ven, lug 3` (anno non
+esplicito), senza ProgressBar, e sono identici:
+`c9c132456c4398fad1cb6db2614b2b1caa552c3c281e90c283a9d74bc4299d49`.
+Lo screenshot finale ha SHA256
+`8310adf8531104276177c0d8fde00a4ba2a469ce70250b0377a949452afc1019`.
+Non compare una dichiarazione terminale autorevole: stabilità, primi saluti
+plausibili e assenza di loader non provano che non esistano dati precedenti.
+Nessuna ulteriore ripetizione identica viene usata per inventare PASS.
+
+Evidenze private separate:
+`/home/daniele/.local/state/pn-review-20261012/resume-current/P90-Pixel-proof.h5D5HD/`.
+Sono diagnostiche del limite, non un export integrale/normalizzato dei messaggi;
+nessuna completezza delle pagine intermedie viene dichiarata. Nessuna acquisizione
+media/P91, messaggio, reazione, login, lettura credenziali, API private, installazione,
+cancellazione log o modifica PersonalHub. Notifiche sospese. I 23 file storici hanno
+ancora fingerprint `3d96e20480d06d7a9c63db0831715cf7ab486694863b17e62084a3989070488b`;
+record storico 65 figli preservato, posizione del suo raw ancora non dimostrata.
+
+Esito P90 PARTIAL: fallback selezione Android verificato, #4 chiudibile; #6 resta
+aperta. Il nuovo gate non è più la disponibilità del Pixel ma l'assenza di una
+prova autorevole del confine Android. Next action: ottenere una dichiarazione
+terminale UI oppure evidenza ufficiale/supporto specifica del client/account;
+non richiedere o esportare dati privati né contattare supporto automaticamente.
+Non promuovere il PASS Web a PASS Android e non avviare P91. Nessuna correzione
+al normalizzatore indispensabile; test Web invariati non ripetuti.
 
 ## Fonti ufficiali consultate
 
