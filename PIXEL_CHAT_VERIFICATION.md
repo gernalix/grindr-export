@@ -3,6 +3,9 @@
 P90, project 106. La verifica Web P110 è riuscita nell'ambito sotto dichiarato.
 P116 ha verificato il fallback manuale Android con due aperture della stessa
 chat (#4); il confine Android resta non dimostrato (#6), quindi P90 è PARTIAL.
+P121 recepisce il chiarimento umano: Android non richiede un marker testuale;
+la conferma dell'effettivo arresto dello scroll deve riferirsi alla chat verificata.
+Le sezioni datate sotto conservano i risultati storici, non criteri aggiuntivi.
 Questo documento non autorizza API private, accesso al database dell'app o
 aggiramenti di protezioni. Le acquisizioni esistenti non vanno rigenerate.
 
@@ -49,18 +52,21 @@ e dopo la data più antica visibile. Se compare una data precedente, proseguire.
 Interruzioni di rete, loader bloccato, sola posizione/altezza stabile e un numero
 invariato di elementi sono osservazioni diagnostiche: non provano completezza.
 
-Un PASS del confine richiede una dichiarazione terminale autorevole della UI
-del client in esame, riferita alla stessa chat, con evidenza conservata e nessun
-caricamento ancora pendente. Se la UI Android non espone un criterio terminale,
-non inventarlo: richiedere conferma dal supporto Grindr per quel client/account,
-oppure una fonte ufficiale già fornita dall'utente che documenti esplicitamente
-il suo ambito e il limite. Non richiedere export di dati o contattare il supporto
-automaticamente. Una fonte ufficiale parziale non dimostra dati mai conservati
-o cancellati. Una data conosciuta più antica confuta il limite osservato, ma
-la sua assenza non dimostra che il limite sia completo.
+Per Android, il chiarimento dell'utente recepito in P121 ammette la verifica
+manuale supportata dell'effettiva impossibilità di scorrere ancora verso i
+messaggi precedenti: nessun indicatore testuale d'inizio è obbligatorio. Registrare
+chi ha verificato, la stessa chat identificata, il punto raggiunto, le evidenze
+disponibili e i limiti. Non sostituire questa conferma con sole firme/altezza
+invariate, un loader pendente, un errore di rete o un'acquisizione fallita.
+La conferma umana è provenance dell'osservazione, non una dichiarazione ufficiale
+Grindr e non dimostra messaggi cancellati, mai conservati o indisponibili.
 
-Se manca una prova autorevole del limite Android, P90 rimane BLOCKED anche
-quando la selezione manuale funziona. Non promuovere uno scroll stabile a PASS.
+Il PASS riguarda il limite disponibile nel client verificato, non la completezza
+universale della conversazione né un export integrale dei messaggi. Una data
+conosciuta più antica confuta il limite osservato. Non imporre supporto o export
+come gate aggiuntivi se la prova manuale della stessa chat è sufficiente; non
+contattare supporto automaticamente. Per il normalizzatore Web rimane invariato
+il requisito del marker specifico del Web.
 
 ## Evidenze del turno 2026-10-12
 
@@ -240,6 +246,35 @@ terminale UI oppure evidenza ufficiale/supporto specifica del client/account;
 non richiedere o esportare dati privati né contattare supporto automaticamente.
 Non promuovere il PASS Web a PASS Android e non avviare P91. Nessuna correzione
 al normalizzatore indispensabile; test Web invariati non ripetuti.
+
+## Ripresa P121: chiarimento umano sul criterio Android
+
+Receipt fresh launch VALID, body SHA256
+`be9b138d733cb5e2901f7166fb9825ee551d85993185fa68d4cf3aa5dd15d9ce`,
+parent90/project106, modello gpt-6.1-sol high STRICT, capability
+`pn-remote-bootstrap-v1`, policy verificata
+`65feb6298c560aed1d057b4f0d9942a54fd5e0bb`. Lo STOP d'emergenza è stato archiviato
+dal coordinatore dopo la conferma umana; non è stato rimosso da questo worker.
+
+L'utente ha verificato e chiarito direttamente che per riconoscere l'inizio non
+occorre un indicatore testuale, ma l'impossibilità di risalire ulteriormente.
+Il requisito aggiunto dall'assistente di una dichiarazione testuale o di una
+risposta dal supporto era troppo restrittivo ed è corretto sopra. Restano intatti
+i corpi immutabili, gli esiti e le acquisizioni precedenti; non viene retroattivamente
+inventato un marker Android né una conferma di Grindr.
+
+Resta una sola informazione pendente: il chiarimento umano riguarda il criterio
+generale oppure anche l'effettiva verifica sulla medesima chat Pixel identificata
+in P116, al separatore osservato `ven, lug 3`? La domanda era già stata posta:
+non è stata duplicata e nessuna risposta target-specific è stata inventata.
+L'attestazione del target, se confermata, sarà conservata separatamente e collegata
+alle prove esistenti. Le sole pagine stabili non bastano ancora per tale attribuzione.
+
+#4 rimane risolta per il fallback riprodotto; #6 resta aperta in attesa di questa
+conferma, non per mancanza di marker o di risposta ufficiale. Nessun nuovo uso di
+Pixel/browser, acquisizione, test Web già PASS o lookup di credenziali. Nessuna
+modifica al normalizzatore: la correzione è limitata al criterio/documentazione
+Android. P90 non è ancora completo e P91 non viene avviato.
 
 ## Fonti ufficiali consultate
 
