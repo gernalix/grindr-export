@@ -54,6 +54,49 @@ A successful run produces:
 - `messages.csv` — flat message list;
 - `README.md` — per-export summary;
 - `raw/acquisition_summary.json` — validation result and warnings.
+- `raw/export_manifest.json` — last-write receipt of source and output SHA256s.
+
+## Normally obtained media and readback
+
+The acquisition tool may save a rendered chat image/video using its supported
+`downloadMedia` method or bundle narrowly selected observed `pageAssets`. It must
+not recover expired assets through browser caches, private APIs or authentication
+bypasses. Ingest the returned file without recompression or conversion:
+
+```bash
+python3 grindr_media.py ARCHIVE_DIR --source-file BROWSER_RETURNED_FILE \
+  --url-redacted OBSERVED_URL_WITHOUT_QUERY_OR_FRAGMENT \
+  --kind image --provider browser-download
+python3 grindr_media.py ARCHIVE_DIR --verify
+python3 grindr_dom_archive.py ARCHIVE_DIR
+python3 grindr_dom_archive.py ARCHIVE_DIR --verify
+```
+
+The ingest verifies source magic type, exact copied byte count and SHA256, binds
+the manifest to the immutable acquisition hash, deduplicates storage by content
+hash and preserves individual message associations. Magic recognition is not a
+full codec/decode validator. Identical retries are no-ops; changed source bytes,
+corruption and cross-acquisition media fail closed. A failure after object copy
+but before manifest commit can resume using the same acquired file. Never mutate
+a historical raw acquisition to attach another conversation; use a fresh folder.
+
+Saved files are the unchanged **browser-served representation**, not proof of
+the sender's original upload or full resolution. Unavailable media remains
+explicitly missing. Local message IDs are synthetic, not native Grindr IDs.
+
+Snapshots are reconciled in acquisition order through unambiguous overlaps, not
+by choosing the largest page or globally deduplicating repeated message text.
+Gaps and ambiguous repeated-event overlaps fail instead of silently losing data.
+New captures use `acquisitionSchemaVersion: 2`, `acquisitionComplete: true` and
+`completionEvidence.newestReached: true` only after reaching both real bounds.
+
+Normalization preserves a prior SQLite file if its replacement fails. The output
+set is not a multi-file transaction: the last-write export receipt detects an
+interrupted or changed generation. `--verify` checks current source, manifest,
+output and media bytes; rerun normalization from the preserved capture to recover.
+The static viewer wiring check does not prove live browser search or rendering.
+An overall Pn remains PARTIAL when required media or live acceptance is missing,
+even if this one archive reports `PASS WITH WARNINGS`.
 
 Open the viewer with:
 
