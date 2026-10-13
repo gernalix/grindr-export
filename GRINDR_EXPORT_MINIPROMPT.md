@@ -6,11 +6,18 @@ Use Codex Desktop Chrome control on the existing Grindr tab. Acquire the chat wi
 
 `/home/daniele/Documents/ChatGPT/Pixel 8a/grindr_archive/<chat_name>_<YYYYMMDDTHHMMSSZ>/raw/dom_snapshots.json`
 
-Each snapshot must preserve, for every visible chat child, the text/innerText, outer rectangle, bubble rectangle and text when present, images/videos with redacted URL paths, role/aria metadata, and `startMarkerPresent`. Preserve the page URL/title and `exportedAt`. Do not store cookies, auth headers, tokens, session secrets, or signed URL query strings.
+Each snapshot must preserve, for every visible chat child, the text/innerText, outer rectangle, bubble rectangle and text when present, images/videos/audio with redacted URL paths, role/aria metadata, and `startMarkerPresent`. Preserve the page URL/title, selected chat name and `exportedAt`. Do not store cookies, auth headers, tokens, session secrets, or signed URL query strings. The fullscreen image viewer can put a signed URL in `alt`: omit URL-shaped alt text instead of copying it as a caption.
+
+Save all pages in actual oldest-to-newest acquisition order with overlapping
+events. Set `acquisitionSchemaVersion: 2`; set `acquisitionComplete: true` and
+`completionEvidence.newestReached: true` only after the newest bound is reached.
+An interrupted capture retains `acquisitionComplete: false`. Never replace
+historical captures; use a new acquisition directory. Reconciliation fails on
+gaps or unidentifiable overlap rather than choosing the largest snapshot.
 
 If Grindr omits the start-marker text, do not infer completion from its absence. Continue using real UI scrolling in the older-history direction, with waits for lazy loading, and inspect child count, height, oldest date, and loader state after each block. Repeated unchanged `scrollTop`/`scrollHeight` may be recorded as diagnostic evidence (`method: "reverse-scroll-stable"`), but never proves the oldest boundary and must never produce `PASS`. Completion requires the actual terminal UI start marker.
 
-Use `pageAssets` only for browser-observed image/video assets that can be bundled normally. If an asset or private album cannot be exported normally, record it as non-exportable and continue; do not bypass Grindr protections.
+Use `pageAssets` only for browser-observed image/video assets that can be bundled normally, or supported `downloadMedia` on the observed chat media. Ingest the browser-returned file with `grindr_media.py` (see README) to preserve exact bytes and verified association. If an asset or private album cannot be exported normally, record it as non-exportable and continue; do not bypass Grindr protections or recover from private caches. Browser-served bytes do not prove the sender's original pre-upload file.
 
 After acquisition, run:
 
