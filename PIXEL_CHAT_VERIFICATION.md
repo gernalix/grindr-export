@@ -2,9 +2,11 @@
 
 P90, project 106. La verifica Web P110 è riuscita nell'ambito sotto dichiarato.
 P116 ha verificato il fallback manuale Android con due aperture della stessa
-chat (#4); il confine Android resta non dimostrato (#6), quindi P90 è PARTIAL.
-P121 recepisce il chiarimento umano: Android non richiede un marker testuale;
-la conferma dell'effettivo arresto dello scroll deve riferirsi alla chat verificata.
+chat (#4). Il chiarimento P121 e la successiva conferma umana sulla stessa chat
+completano la verifica del limite disponibile Android (#6): P90 PASS nell'ambito
+UI dichiarato, con verifica manuale supportata, non con sola stabilità dello scroll.
+Android non richiede un marker testuale; la conferma dell'effettivo arresto dello
+scroll è riferita alla medesima chat identificata nelle prove fisiche.
 Le sezioni datate sotto conservano i risultati storici, non criteri aggiuntivi.
 Questo documento non autorizza API private, accesso al database dell'app o
 aggiramenti di protezioni. Le acquisizioni esistenti non vanno rigenerate.
@@ -275,6 +277,48 @@ conferma, non per mancanza di marker o di risposta ufficiale. Nessun nuovo uso d
 Pixel/browser, acquisizione, test Web già PASS o lookup di credenziali. Nessuna
 modifica al normalizzatore: la correzione è limitata al criterio/documentazione
 Android. P90 non è ancora completo e P91 non viene avviato.
+
+## Conferma finale sulla stessa chat — 2026-10-13
+
+Alla domanda già pendente, che distingueva il criterio generale dalla verifica
+effettiva sulla medesima chat Pixel al separatore `ven, lug 3`, l'utente ha risposto
+direttamente: «Sì, ho verificato quella stessa chat». La risposta chiude il solo
+gate lasciato aperto da P121: il riscontro manuale sull'impossibilità di ottenere
+ulteriori messaggi è collegato alla stessa identità nativa conservata nella receipt
+P116, non a una chat dedotta dal nome né al precedente target Web/Fun.
+
+Provenance privata additiva: `final-boundary-confirmation.json` nella directory
+`/home/daniele/.local/state/pn-review-20261012/resume-current/P90-Pixel-proof.h5D5HD/`.
+Domanda, risposta e collegamento alle prove originali sono conservati; i precedenti
+verdetti PARTIAL/BLOCKED, corpi Pn, snapshot e receipt non sono riscritti come se
+la conferma fosse già disponibile allora. Nessuna dichiarazione ufficiale Grindr
+o marker Android viene inventato. L'assenza di loader e le tre pagine identiche
+sono solo evidenze di contesto, non la sola base del PASS.
+
+Acceptance finale:
+
+- selezione/fallback Android riprodotto con due aperture, attività foreground e
+  identità nativa coincidente: verificato, #4 già risolta;
+- limite disponibile nella stessa chat Android: verifica manuale umana esplicita,
+  corroborata dalle prove fisiche conservate, requisito #6 soddisfatto;
+- 23 file storici ancora byte-invariati al readback finale, fingerprint
+  `3d96e20480d06d7a9c63db0831715cf7ab486694863b17e62084a3989070488b`;
+  record storico 65 figli preservato, nessun dato eliminato/rinormalizzato;
+- codice/fixture/normalizzatore Web invariati, nessuna correzione runtime necessaria
+  e nessuna ripetizione dei sette test già PASS sul perimetro immutato;
+- nessun nuovo uso di Pixel/browser, export/media, credential lookup, messaggio,
+  notifica, worker/chat o modifica a PersonalHub/C2/C3.
+
+Limiti: il PASS riguarda l'inizio dello storico disponibile in questa UI/chat,
+non tutti i messaggi mai scambiati, quelli cancellati o mai conservati. L'anno
+del separatore non è esplicito nella UI. Gli snapshot Android restano diagnostici,
+non un export integrale/normalizzato; i messaggi non ricevono ID nativi inventati.
+La posizione del raw storico di 65 figli resta non dimostrata, non viene affermata
+una nuova acquisizione o una verifica di file non reperiti. P91 non è avviato:
+il gate P90 può essere soddisfatto senza anticipare quel task.
+
+Esito finale P90 PASS dopo integrazione/readback della presente attestazione e
+chiusura #6. Non serve ripetere scroll, richiedere un marker o contattare supporto.
 
 ## Fonti ufficiali consultate
 
