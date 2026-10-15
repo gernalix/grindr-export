@@ -90,6 +90,11 @@ Gaps and ambiguous repeated-event overlaps fail instead of silently losing data.
 New captures use `acquisitionSchemaVersion: 2`, `acquisitionComplete: true` and
 `completionEvidence.newestReached: true` only after reaching both real bounds.
 
+Grindr's visible date labels can omit the year. Derived datetime years are
+inferred backward from the newest messages and export date, including histories
+that cross year boundaries. Original date labels, message order and IDs remain
+unchanged. These inferred years are not native Grindr timestamps.
+
 Normalization preserves a prior SQLite file if its replacement fails. The output
 set is not a multi-file transaction: the last-write export receipt detects an
 interrupted or changed generation. `--verify` checks current source, manifest,
