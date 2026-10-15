@@ -29,7 +29,7 @@ def clean(value):
     return re.sub(r"[ \t\r\f\v]+", " ", (value or "").replace("\u00a0", " ")).strip()
 
 
-def parse_date(label, exported_at):
+def parse_date(label, exported_at, not_after=None):
     exported_dt = datetime.fromisoformat(exported_at.replace("Z", "+00:00"))
     if exported_dt.tzinfo is not None:
         exported_dt = exported_dt.astimezone()
@@ -39,10 +39,38 @@ def parse_date(label, exported_at):
     if label == "Yesterday":
         return base - timedelta(days=1)
     day, mon = label.split()
-    candidate = base.replace(month=MONTHS[mon], day=int(day))
-    if candidate > base:
-        candidate = candidate.replace(year=base.year - 1)
-    return candidate
+    month, day = MONTHS[mon], int(day)
+    # Validate the label independently of the inferred year (including Feb 29).
+    datetime(2000, month, day)
+    anchor = not_after or base
+    year = anchor.year
+    while year > 0:
+        try:
+            candidate = anchor.replace(year=year, month=month, day=day)
+        except ValueError:
+            year -= 1
+            continue
+        if candidate <= anchor:
+            return candidate
+        year -= 1
+    raise ValueError("No past calendar date matches the visible label")
+
+
+def infer_message_datetimes(rows, exported_at):
+    # The UI omits years. Infer from the newest end without sorting messages
+    # or changing the original date labels, times, IDs or media associations.
+    not_after = None
+    for row in reversed(rows):
+        if not row["date_label"]:
+            continue
+        try:
+            date_value = parse_date(row["date_label"], exported_at, not_after)
+            not_after = date_value
+            if row["time_text"]:
+                time_value = datetime.strptime(row["time_text"], "%I:%M %p").time()
+                row["datetime"] = datetime.combine(date_value, time_value).isoformat()
+        except (KeyError, TypeError, ValueError):
+            continue
 
 
 def parse_time(text):
@@ -166,17 +194,6 @@ def extract_messages(data, archive_dir):
         if is_map:
             body = "Map/location preview"
 
-        date_value = None
-        dt_value = None
-        if date_label:
-            try:
-                date_value = parse_date(date_label, exported_at)
-                if time_text:
-                    parsed = datetime.strptime(time_text, "%I:%M %p").time()
-                    dt_value = datetime.combine(date_value, parsed).isoformat()
-            except Exception:
-                date_value = None
-
         seq = len(rows) + 1
         mid = message_id([seq, side, date_label, time_text, body])
         sender = "Me" if side == "me" else ("Other" if side == "other" else "System/visible item")
@@ -187,7 +204,7 @@ def extract_messages(data, archive_dir):
             "side": side,
             "date_label": date_label,
             "time_text": time_text,
-            "datetime": dt_value,
+            "datetime": None,
             "text": body,
             "html_text": html.escape(body).replace("\n", "<br>"),
             "raw_kind": "album" if is_album else ("map" if is_map else ("media" if useful_images or useful_videos or useful_audios else "message")),
@@ -222,6 +239,7 @@ def extract_messages(data, archive_dir):
                 "source_url_redacted": None,
             })
 
+    infer_message_datetimes(rows, exported_at)
     return exported_at, snapshot, rows, media, non_exportable
 
 
@@ -382,6 +400,7 @@ def main():
         "acquisition_sha256": digest_file(raw_path),
         "media_byte_representation": "browser-served bytes; original sender upload not asserted",
         "message_id_representation": "local synthetic sequence/content ID; not a native Grindr message ID",
+        "datetime_representation": "years inferred backward from export date and visible chat order; original date labels retained",
     }
     (archive_dir / "messages.json").write_text(json.dumps({"metadata": metadata, "messages": rows, "media": media, "nonExportable": non_exportable}, ensure_ascii=False, indent=2), encoding="utf-8")
     with (archive_dir / "messages.csv").open("w", newline="", encoding="utf-8") as fh:
@@ -414,6 +433,8 @@ Albums: {metadata['albums']}
 - raw/: acquisition and validation metadata.
 
 ## Limits
+
+Years in derived datetime values are inferred backward from the export date and visible chat order. Original date labels and message order are preserved; inferred years are not native Grindr timestamps.
 
 Media marked non-exportable was visible or referenced in Grindr Web but could not be saved through normal browser/page asset access. No ephemeral/view-once, anti-capture, login/session, cookie, or API protections were bypassed.
 """, encoding="utf-8")

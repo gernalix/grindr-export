@@ -139,6 +139,44 @@ class GrindrArchiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at least one snapshot"):
             archive.choose_snapshot({"snapshots": []})
 
+    def assert_visible_dates(self, exported_at, events, expected_datetimes):
+        with tempfile.TemporaryDirectory() as td:
+            export_dir = self.make_archive(td)
+            payload = json.loads((export_dir / "raw" / "dom_snapshots.json").read_text())
+            children = []
+            for label, body, time in reversed(events):
+                children.extend([child(f"{body} {time}" if time else body, 450), child(label)])
+            children.append(child("Start of Grindr Web chat history"))
+            payload["exportedAt"] = exported_at
+            payload["snapshots"][0].update(children=children, childCount=len(children))
+            before = json.dumps(payload, sort_keys=True)
+            _, _, rows, _, _ = archive.extract_messages(payload, export_dir)
+            self.assertEqual([row["text"] for row in rows], [event[1] for event in events])
+            self.assertEqual([row["date_label"] for row in rows], [event[0] for event in events])
+            self.assertEqual([row["datetime"] for row in rows], expected_datetimes)
+            self.assertEqual(json.dumps(payload, sort_keys=True), before)
+
+    def test_infers_year_rollover_from_newest_to_oldest_without_reordering_messages(self):
+        self.assert_visible_dates("2026-10-16T12:00:00Z", [
+            ("7 Oct", "Older", "6:52 PM"),
+            ("18 Oct", "Middle", "11:38 PM"),
+            ("12 Oct", "Newest", "3:02 PM"),
+        ], ["2025-10-07T18:52:00", "2025-10-18T23:38:00", "2026-10-12T15:02:00"])
+
+    def test_untimed_date_group_still_constrains_older_years(self):
+        self.assert_visible_dates("2026-10-16T12:00:00Z", [
+            ("7 Oct", "Older", "6:52 PM"),
+            ("18 Oct", "Untimed", None),
+            ("12 Oct", "Newest", "3:02 PM"),
+        ], ["2025-10-07T18:52:00", None, "2026-10-12T15:02:00"])
+
+    def test_year_inference_preserves_leap_day_and_export_relative_labels(self):
+        self.assert_visible_dates("2025-03-02T12:00:00Z", [
+            ("29 Feb", "Leap day", "2:00 PM"),
+            ("Yesterday", "Recent", "3:00 PM"),
+            ("Today", "Current", "4:00 PM"),
+        ], ["2024-02-29T14:00:00", "2025-03-01T15:00:00", "2025-03-02T16:00:00"])
+
     def test_history_start_marker_passes(self):
         snapshot = {"startMarkerPresent": True}
         self.assertTrue(archive.history_start_verified({"snapshots": [snapshot]}, snapshot))
