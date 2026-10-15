@@ -151,7 +151,7 @@ def extract_messages(data, archive_dir):
             continue
         if text == "Start of Grindr Web chat history":
             continue
-        if DATE_RE.match(text):
+        if DATE_RE.match(text) and not child.get("bubble"):
             current_date = text
             continue
 

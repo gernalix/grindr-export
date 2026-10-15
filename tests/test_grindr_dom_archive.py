@@ -177,6 +177,21 @@ class GrindrArchiveTests(unittest.TestCase):
             ("Today", "Current", "4:00 PM"),
         ], ["2024-02-29T14:00:00", "2025-03-01T15:00:00", "2025-03-02T16:00:00"])
 
+    def test_date_shaped_bubble_is_a_message_and_keeps_surrounding_date(self):
+        for body in ["Today", "Yesterday", "22 May"]:
+            with self.subTest(body=body), tempfile.TemporaryDirectory() as td:
+                export_dir = self.make_archive(td)
+                payload = json.loads((export_dir / "raw" / "dom_snapshots.json").read_text())
+                children = [child("After 2:10 PM", 450), child(body, 0),
+                            child("Before 2:00 PM", 450), child("22 May"),
+                            child("Start of Grindr Web chat history")]
+                payload["snapshots"][0].update(children=children, childCount=len(children))
+                _, _, rows, _, _ = archive.extract_messages(payload, export_dir)
+                self.assertEqual([r["text"] for r in rows], ["Before", body, "After"])
+                self.assertEqual([r["date_label"] for r in rows], ["22 May"] * 3)
+                self.assertEqual(rows[1]["side"], "other")
+                self.assertEqual(rows[2]["datetime"], "2026-05-22T14:10:00")
+
     def test_history_start_marker_passes(self):
         snapshot = {"startMarkerPresent": True}
         self.assertTrue(archive.history_start_verified({"snapshots": [snapshot]}, snapshot))
