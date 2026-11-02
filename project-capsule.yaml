@@ -1,0 +1,253 @@
+schema_version: c2.project-capsule.v1
+identity:
+  project_id: 106
+  slug: grindr-export
+  repository_id: R0107
+scope:
+  purpose: Normalize explicitly acquired Grindr Web DOM snapshots into a verifiable
+    offline archive without acquiring credentials.
+  boundaries:
+  - Never open a Grindr tab, Pixel UI, private APIs, caches or live archive for capsule
+    verification.
+  - The actual UI terminal history-start marker is required for a complete Web export;
+    unchanged scroll geometry alone is insufficient.
+repository:
+  canonical_workdir: /home/daniele/projects/grindr-export
+  branch_policy: Use isolated task worktrees and the installed Git single writer;
+    preserve the existing primary branch and all unintegrated work.
+architecture:
+  summary: grindr_snapshots.py reconciles snapshot overlap. grindr_media.py owns local
+    media ingestion, magic/hash validation, manifests and safe associations. grindr_dom_archive.py
+    orchestrates extraction and staged SQLite/JSON/CSV/viewer publication. Browser/Pixel
+    acquisition is a separate, explicitly authorized phase.
+  entrypoints:
+  - grindr_dom_archive.py
+  - grindr_media.py
+  important_paths:
+  - grindr_snapshots.py
+  - tests
+  - README.md
+  - GRINDR_EXPORT_MINIPROMPT.md
+  - PIXEL_CHAT_VERIFICATION.md
+dependencies:
+- name: Python standard library
+  purpose: Offline application code, SQLite where applicable and unit fixtures.
+- name: Bubblewrap
+  purpose: FULL verification isolates networking, processes, user home, runtime sockets,
+    devices and host data; source is read-only.
+data:
+  schema: Each private export preserves raw DOM acquisition and produces messages,
+    media and non_exportable tables plus metadata, JSON/CSV/viewer and a last-write
+    hash receipt. Web oldest-boundary evidence does not prove absolute Android history
+    completeness.
+  migrations: Preserve immutable acquisition/media bytes and existing exports. Use
+    staged output publication and the owning normalizer; never byte-merge or overwrite
+    a live archive database to resolve Git state.
+runtime:
+  services: []
+  timers: []
+  containers: []
+devices:
+- Pixel and browser acquisition are specialist operations; offline tests use synthetic
+  DOM/media fixtures only.
+commands:
+  setup:
+    not_applicable: Python standard library for offline normalization/tests. Browser/device
+      acquisition is separate.
+  build:
+    not_applicable: Python source has no required compiled build.
+  test_targeted:
+    argv:
+    - bwrap
+    - --die-with-parent
+    - --unshare-net
+    - --unshare-pid
+    - --ro-bind
+    - /
+    - /
+    - --tmpfs
+    - /home
+    - --tmpfs
+    - /run
+    - --tmpfs
+    - /tmp
+    - --tmpfs
+    - /mnt
+    - --tmpfs
+    - /media
+    - --tmpfs
+    - /var/lib
+    - --proc
+    - /proc
+    - --dev
+    - /dev
+    - --ro-bind
+    - .
+    - /tmp/work
+    - --chdir
+    - /tmp/work
+    - --clearenv
+    - --setenv
+    - PATH
+    - /usr/bin:/bin
+    - --setenv
+    - HOME
+    - /tmp
+    - --setenv
+    - PYTHONPATH
+    - /tmp/work:/tmp/work/src
+    - --setenv
+    - PYTHONDONTWRITEBYTECODE
+    - '1'
+    - /usr/bin/python3
+    - -B
+    - -m
+    - unittest
+    - discover
+    - -s
+    - tests
+    - -p
+    - test_grindr_export_integrity.py
+    - -v
+    cwd: .
+  test_full:
+    argv: &id001
+    - bwrap
+    - --die-with-parent
+    - --unshare-net
+    - --unshare-pid
+    - --ro-bind
+    - /
+    - /
+    - --tmpfs
+    - /home
+    - --tmpfs
+    - /run
+    - --tmpfs
+    - /tmp
+    - --tmpfs
+    - /mnt
+    - --tmpfs
+    - /media
+    - --tmpfs
+    - /var/lib
+    - --proc
+    - /proc
+    - --dev
+    - /dev
+    - --ro-bind
+    - .
+    - /tmp/work
+    - --chdir
+    - /tmp/work
+    - --clearenv
+    - --setenv
+    - PATH
+    - /usr/bin:/bin
+    - --setenv
+    - HOME
+    - /tmp
+    - --setenv
+    - PYTHONPATH
+    - /tmp/work:/tmp/work/src
+    - --setenv
+    - PYTHONDONTWRITEBYTECODE
+    - '1'
+    - /usr/bin/python3
+    - -B
+    - -m
+    - unittest
+    - discover
+    - -s
+    - tests
+    - -v
+    cwd: .
+  lint:
+    argv:
+    - git
+    - diff
+    - --check
+    cwd: .
+  deploy_install:
+    not_applicable: On-demand source utility; no runtime service installation. Acquisition
+      and real export generation are separate.
+  smoke:
+    not_applicable: Live runtime/data/desktop/device checks are separate operations,
+      never capsule hooks.
+  verify:
+    fast:
+      argv:
+      - python3
+      - /home/daniele/projects/codex-roadmap/tools/project_capsule.py
+      - --repo
+      - .
+      - --mode
+      - FAST
+      cwd: .
+    full:
+      argv:
+      - python3
+      - /home/daniele/projects/codex-roadmap/tools/project_capsule.py
+      - --repo
+      - .
+      - --mode
+      - FULL
+      cwd: .
+safety:
+  invariants:
+  - No cookies, tokens, signed media query strings, private chat bodies or real archive
+    data in Git/output.
+  - Preserve raw acquisition and non-exportable records; do not bypass protected/expired
+    assets.
+  - Keep Web and Android history gates separate and verify exact media hashes/associations.
+  risky_operations:
+  - Acquisition, real-media ingest and archive generation change private exports or
+    interact with browsers/devices.
+  recovery:
+  - Preserve original runtime data and sources; use consistent private backups and
+    owning semantic writers for recovery.
+  - Source integration does not install, restart or validate live consumers.
+acceptance:
+- FAST validates identity, schema, local paths, executable commands and reviewed-source
+  freshness.
+- FULL passes the existing fixture suite inside the isolated read-only-source sandbox.
+- No live browser, clipboard, disk, credential, notification or private archive operation
+  is implied.
+references:
+  megavault: /home/daniele/MegaVault/megavault.sqlite
+  c2: Historical-only /home/daniele/projects/codex-roadmap/roadmap.sqlite; no lifecycle
+    writes or dispatcher use.
+freshness:
+  reviewed_commit: 6e2c949f6678ae7a0074a9e2484a195ac1fdcd0f
+  watch_paths:
+  - grindr_dom_archive.py
+  - grindr_media.py
+  - grindr_snapshots.py
+  - tests
+  - NV.txt
+artifacts:
+  agents: AGENTS.md
+  architecture: README.md
+  operations: README.md
+  data_model: grindr_dom_archive.py
+validation_hooks:
+- id: isolated-offline-tests
+  argv: *id001
+  cwd: .
+  safe: true
+change_verification:
+- paths:
+  - project-capsule.yaml
+  - AGENTS.md
+  - '*.md'
+  commands:
+  - lint
+- paths:
+  - '*.py'
+  - src/*
+  - tests/*
+  - scripts/*
+  - systemd/*
+  - packaging/*
+  commands:
+  - test_full
