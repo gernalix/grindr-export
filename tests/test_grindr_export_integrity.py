@@ -1,6 +1,7 @@
 import base64
 import copy
 import contextlib
+import csv
 import hashlib
 import json
 import io
@@ -54,6 +55,23 @@ class ExportIntegrityTests(unittest.TestCase):
             self.assertEqual(media.ingest(root, source, URL, "image", "browser-page-assets"), record)
             self.assertEqual((root / "raw" / "media_copy_summary.json").read_bytes(), before)
             self.assertFalse(record["originalUploadVerified"])
+
+    def test_legacy_media_without_kind_and_redacted_only_reference(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, source, payload = self.make_media_archive(directory)
+            reference = next(c["images"][0] for c in payload["snapshots"][0]["children"] if c["images"])
+            reference["urlRedacted"] = reference.pop("src")
+            (root / "raw" / "dom_snapshots.json").write_text(json.dumps(payload))
+            record = media.ingest(root, source, URL, "image", "browser-download")
+            legacy = {key: value for key, value in record.items() if key != "kind"}
+            manifest = root / "raw" / "media_copy_summary.json"
+            data = json.loads(manifest.read_text())
+            data["copied"] = [legacy]
+            media.atomic_manifest(manifest, data)
+            self.assertEqual(media.ingest(root, source, URL, "image", "browser-download"), legacy)
+            _, _, _, exported, missing = archive.extract_messages(payload, root)
+            self.assertEqual([item["local_path"] for item in exported], [record["local_path"]])
+            self.assertEqual(missing, [])
 
     def test_shared_bytes_deduplicated_without_losing_message_associations(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -158,6 +176,34 @@ class ExportIntegrityTests(unittest.TestCase):
     def run_export(self, root):
         with mock.patch.object(sys, "argv", ["grindr_dom_archive.py", str(root)]), contextlib.redirect_stdout(io.StringIO()):
             return archive.main()
+
+    def test_csv_neutralizes_formula_like_text_without_changing_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, source, payload = self.make_media_archive(directory)
+            value = "=1+1"
+            payload["snapshots"][0]["children"].append(child(value, bubble_x=10))
+            (root / "raw" / "dom_snapshots.json").write_text(json.dumps(payload))
+            media.ingest(root, source, URL, "image", "browser-download")
+            self.assertEqual(self.run_export(root), 0)
+            with (root / "messages.csv").open(newline="") as stream:
+                self.assertIn("'" + value, [row["text"] for row in csv.DictReader(stream)])
+            exported = json.loads((root / "messages.json").read_text())
+            self.assertIn(value, [row["text"] for row in exported["messages"]])
+            self.assertEqual(archive.csv_cell("\t＠synthetic"), "'\t＠synthetic")
+
+    def test_export_replaces_output_link_with_private_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, source, _ = self.make_media_archive(directory)
+            other = Path(directory) / "sentinel"
+            other.write_text("fixture")
+            output = root / "messages.json"
+            output.symlink_to(other)
+            media.ingest(root, source, URL, "image", "browser-download")
+            self.assertEqual(self.run_export(root), 0)
+            self.assertFalse(output.is_symlink())
+            self.assertEqual(other.read_text(), "fixture")
+            for relative in archive.OUTPUTS:
+                self.assertEqual((root / relative).stat().st_mode & 0o777, 0o600)
 
     def test_repeated_normalization_is_byte_idempotent_and_readback_checks_real_files(self):
         with tempfile.TemporaryDirectory() as directory:
