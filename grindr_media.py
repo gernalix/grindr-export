@@ -6,6 +6,7 @@ import fcntl
 import hashlib
 import json
 import os
+import stat
 from pathlib import Path
 import shutil
 import tempfile
@@ -53,7 +54,7 @@ def media_type(path):
 
 
 def acquisition_scope(archive_dir):
-    raw = Path(archive_dir) / "raw" / "dom_snapshots.json"
+    raw = archive_member(archive_dir, "raw/dom_snapshots.json")
     raw_bytes = raw.read_bytes()
     data = json.loads(raw_bytes)
     refs = set()
@@ -70,15 +71,33 @@ def acquisition_scope(archive_dir):
     return hashlib.sha256(raw_bytes).hexdigest(), refs
 
 
-def local_media_path(archive_dir, relative):
+def archive_member(archive_dir, relative):
     root = Path(archive_dir).resolve()
     relative = Path(relative)
-    if relative.is_absolute() or ".." in relative.parts or relative.parts[:1] != ("media",):
-        raise ValueError("Media path must remain in this archive's media directory")
-    candidate = root / relative
-    if candidate.is_symlink() or not candidate.resolve().is_relative_to(root):
-        raise ValueError("Media path escapes the archive or is a symlink")
+    if relative.is_absolute() or not relative.parts or ".." in relative.parts:
+        raise ValueError("Invalid archive path")
+    candidate = root
+    for component in relative.parts:
+        try:
+            info = candidate.stat()
+        except FileNotFoundError:
+            pass
+        else:
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o022:
+                raise PermissionError("Archive directories must be owner-controlled")
+        candidate /= component
+        if candidate.is_symlink():
+            raise ValueError("Archive path must not contain a symlink")
     return candidate
+
+
+def local_media_path(archive_dir, relative):
+    if not isinstance(relative, str) or "\\" in relative or any(ord(c) < 32 for c in relative):
+        raise ValueError("Invalid media path")
+    path = Path(relative)
+    if path.parts[:1] != ("media",) or len(path.parts) < 2 or path.as_posix() != relative:
+        raise ValueError("Media path must remain in this archive's media directory")
+    return archive_member(archive_dir, path)
 
 
 def verify_record(archive_dir, record):
@@ -96,7 +115,7 @@ def verify_record(archive_dir, record):
 
 
 def load_verified_map(archive_dir):
-    path = Path(archive_dir) / "raw" / "media_copy_summary.json"
+    path = archive_member(archive_dir, "raw/media_copy_summary.json")
     if not path.exists():
         return {}
     summary = json.loads(path.read_text(encoding="utf-8"))
@@ -109,33 +128,49 @@ def load_verified_map(archive_dir):
         kind = record.get("kind", media_type(local_media_path(archive_dir, record["local_path"]))[0])
         if (record["urlRedacted"], kind) not in refs:
             raise ValueError("Media has no matching reference in this chat acquisition")
-        if record["urlRedacted"] in result and result[record["urlRedacted"]] != record:
+        key = (record["urlRedacted"], kind)
+        if key in result and result[key] != record:
             raise ValueError("Conflicting records for one media reference")
-        result[record["urlRedacted"]] = record
+        result[key] = record
     return result
 
 
 @contextmanager
 def manifest_lock(archive_dir):
-    raw = Path(archive_dir) / "raw"
-    with (raw / ".media-ingest.lock").open("a") as stream:
-        os.chmod(stream.name, 0o600)
+    lock = archive_member(archive_dir, "raw/.media-ingest.lock")
+    fd = os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
+    with os.fdopen(fd, "rb") as stream:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_nlink != 1:
+            raise PermissionError("Archive lock must be an owned regular file")
+        os.fchmod(fd, 0o600)
         fcntl.flock(stream, fcntl.LOCK_EX)
         yield
 
 
-def atomic_manifest(path, data):
-    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
-                                     prefix=".media-manifest-", delete=False) as stream:
-        temp = Path(stream.name)
-        try:
-            json.dump(data, stream, ensure_ascii=False, indent=2)
-            stream.write("\n")
+@contextmanager
+def private_output(path):
+    fd, name = tempfile.mkstemp(dir=path.parent, prefix=".archive-output-")
+    temp = Path(name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as stream:
+            yield stream
             stream.flush()
             os.fsync(stream.fileno())
-            os.replace(temp, path)
-        finally:
-            temp.unlink(missing_ok=True)
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def write_private_text(path, value):
+    with private_output(path) as stream:
+        stream.write(value)
+
+
+def atomic_manifest(path, data):
+    with private_output(path) as stream:
+        json.dump(data, stream, ensure_ascii=False, indent=2)
+        stream.write("\n")
 
 
 def ingest(archive_dir, source, url, kind, provider):
@@ -158,22 +193,32 @@ def ingest(archive_dir, source, url, kind, provider):
     with manifest_lock(archive_dir):
         if acquisition_scope(archive_dir)[0] != scope:
             raise ValueError("Acquisition changed while preparing media; retry only after finalization")
-        manifest = archive_dir / "raw" / "media_copy_summary.json"
+        manifest = archive_member(archive_dir, "raw/media_copy_summary.json")
         if manifest.exists():
             data = json.loads(manifest.read_text(encoding="utf-8"))
             if data.get("acquisitionSha256") != scope:
                 raise ValueError("Immutable acquisition changed; cannot merge media across chats")
         else:
             data = {"schemaVersion": 1, "acquisitionSha256": scope, "copied": []}
-        existing = next((r for r in data["copied"] if r["urlRedacted"] == url), None)
+        existing = None
+        for record in data["copied"]:
+            if record["urlRedacted"] != url:
+                continue
+            previous_kind = record.get("kind")
+            if previous_kind is None:
+                previous_kind = media_type(local_media_path(archive_dir, record["local_path"]))[0]
+            if previous_kind == kind:
+                existing = record
+                break
         if existing:
             verify_record(archive_dir, existing)
-            if existing["sha256"] != sha or existing["kind"] != kind:
+            if existing["sha256"] != sha:
                 raise ValueError("Resource changed; preserve the prior capture instead of overwriting")
             return existing
         relative = f"media/objects/{sha}{suffix}"
         destination = local_media_path(archive_dir, relative)
-        destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        (archive_dir / "media").mkdir(exist_ok=True, mode=0o700)
+        destination.parent.mkdir(exist_ok=True, mode=0o700)
         if destination.exists():
             if digest_file(destination) != sha:
                 raise ValueError("Content-addressed destination is corrupt; not overwritten")

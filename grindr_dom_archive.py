@@ -5,15 +5,19 @@ import html
 import json
 import os
 import re
-import shutil
 import sqlite3
 import sys
 import tempfile
+import unicodedata
 from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
+from urllib.parse import quote
 
-from grindr_media import atomic_manifest, digest_file, load_verified_map, redacted_url
+from grindr_media import (
+    archive_member, atomic_manifest, digest_file, load_verified_map, manifest_lock, private_output,
+    redacted_url, write_private_text,
+)
 from grindr_snapshots import reconcile
 
 
@@ -158,10 +162,10 @@ def extract_messages(data, archive_dir):
         bubble = child.get("bubble")
         useful_images = [
             im for im in child.get("images", [])
-            if not is_twemoji(im) and (im.get("src") or im.get("alt") or im.get("rawSrcPresent"))
+            if not is_twemoji(im) and (im.get("src") or im.get("urlRedacted") or im.get("alt") or im.get("rawSrcPresent"))
         ]
-        useful_videos = [v for v in child.get("videos", []) if v.get("src") or v.get("rawSrcPresent")]
-        useful_audios = [v for v in child.get("audios", []) if v.get("src") or v.get("rawSrcPresent")]
+        useful_videos = [v for v in child.get("videos", []) if v.get("src") or v.get("urlRedacted") or v.get("rawSrcPresent")]
+        useful_audios = [v for v in child.get("audios", []) if v.get("src") or v.get("urlRedacted") or v.get("rawSrcPresent")]
         is_album = (bubble or {}).get("aria") == "Private Album" or text == "Private Album"
         is_map = "Mapbox" in text or text == "Map"
 
@@ -212,8 +216,9 @@ def extract_messages(data, archive_dir):
 
         references = [("image", im) for im in useful_images] + [("video", im) for im in useful_videos] + [("audio", im) for im in useful_audios]
         for ordinal, (kind, item) in enumerate(references, 1):
-            src = redacted_url(item["src"]) if item.get("src") else None
-            local = media_map.get(src)
+            observed_url = item.get("src") or item.get("urlRedacted")
+            src = redacted_url(observed_url) if observed_url else None
+            local = media_map.get((src, kind))
             media_id = f"{mid}_m{ordinal}"
             if local:
                 media.append({
@@ -286,8 +291,13 @@ def _populate_sqlite(db, metadata, rows, media, non_exportable):
 
 
 def write_viewer(path, metadata, rows, media_by_message, non_exportable):
+    viewer_media = {
+        message: [{**item, "local_path": quote(item["local_path"], safe="/")}
+                  for item in items]
+        for message, items in media_by_message.items()
+    }
     payload = json.dumps(
-        {"metadata": metadata, "messages": rows, "media": media_by_message, "nonExportable": non_exportable},
+        {"metadata": metadata, "messages": rows, "media": viewer_media, "nonExportable": non_exportable},
         ensure_ascii=False,
     )
     # This script element is raw text: HTML entities such as &quot; are not
@@ -299,7 +309,7 @@ def write_viewer(path, metadata, rows, media_by_message, non_exportable):
         .replace("\u2028", "\\u2028")
         .replace("\u2029", "\\u2029")
     )
-    path.write_text(f"""<!doctype html>
+    write_private_text(path, f"""<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Grindr archive - {html.escape(metadata['chat_name'])}</title>
 <style>
@@ -313,17 +323,19 @@ function esc(s){{return (s||'').replace(/[&<>"]/g,c=>({{'&':'&amp;','<':'&lt;','
 function render(){{const term=q.value.toLowerCase();chat.innerHTML='';for(const m of data.messages){{const hay=[m.text,m.sender,m.date_label,m.time_text].join(' ').toLowerCase();if(term&&!hay.includes(term))continue;const wrap=document.createElement('div');wrap.className='msg '+m.side;const b=document.createElement('div');b.className='bubble';let text=esc(m.text);if(term)text=text.replace(new RegExp(term.replace(/[.*+?^${{}}()|[\\]\\\\]/g,'\\\\$&'),'ig'),x=>'<mark>'+x+'</mark>');b.innerHTML=text;for(const media of data.media[m.id]||[]){{if(media.kind==='image'&&media.local_path)b.innerHTML+=`<img src="${{esc(media.local_path)}}" alt="${{esc(media.alt||'image')}}">`;if(media.kind==='video'&&media.local_path)b.innerHTML+=`<video src="${{esc(media.local_path)}}" controls></video>`;if(media.kind==='audio'&&media.local_path)b.innerHTML+=`<audio src="${{esc(media.local_path)}}" controls></audio>`;}}for(const miss of data.nonExportable.filter(x=>x.message_id===m.id))b.innerHTML+=`<div class="missing">${{esc(miss.type)}} not exported: ${{esc(miss.reason)}}</div>`;b.innerHTML+=`<div class="meta">${{esc(m.sender)}} · ${{esc([m.date_label,m.time_text].filter(Boolean).join(' '))}}</div>`;wrap.appendChild(b);chat.appendChild(wrap);}}}}
 q.addEventListener('input',render);render();
 </script></html>
-""", encoding="utf-8")
+""")
 
 
 OUTPUTS = ("messages.json", "messages.csv", "archive.sqlite", "index.html", "README.md", "raw/acquisition_summary.json")
 
 
-def write_export_manifest(archive_dir):
+def write_export_manifest(archive_dir, acquisition_digest):
     """Last-write receipt makes an interrupted multi-file rebuild detectable."""
     manifest = {"schemaVersion": 1, "files": {
-        name: digest_file(archive_dir / name) for name in (*OUTPUTS, "raw/dom_snapshots.json")}}
-    media_manifest = archive_dir / "raw" / "media_copy_summary.json"
+        name: digest_file(archive_member(archive_dir, name)) for name in (*OUTPUTS, "raw/dom_snapshots.json")}}
+    if manifest["files"]["raw/dom_snapshots.json"] != acquisition_digest:
+        raise ValueError("Acquisition changed while generating the export")
+    media_manifest = archive_member(archive_dir, "raw/media_copy_summary.json")
     manifest["mediaManifestSha256"] = digest_file(media_manifest) if media_manifest.exists() else None
     atomic_manifest(archive_dir / "raw" / "export_manifest.json", manifest)
     return manifest
@@ -332,20 +344,32 @@ def write_export_manifest(archive_dir):
 def verify_export(archive_dir):
     """Verify the actual current files, not a stale successful summary."""
     archive_dir = Path(archive_dir)
-    manifest = json.loads((archive_dir / "raw" / "export_manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads(archive_member(archive_dir, "raw/export_manifest.json").read_text(encoding="utf-8"))
     names = set((*OUTPUTS, "raw/dom_snapshots.json"))
     if manifest.get("schemaVersion") != 1 or set(manifest["files"]) != names:
         raise ValueError("Invalid export receipt")
     for name in names:
-        if digest_file(archive_dir / name) != manifest["files"][name]:
+        if digest_file(archive_member(archive_dir, name)) != manifest["files"][name]:
             raise ValueError("Export interrupted or changed; rebuild from preserved acquisition")
-    media_manifest = archive_dir / "raw" / "media_copy_summary.json"
+    media_manifest = archive_member(archive_dir, "raw/media_copy_summary.json")
     current = digest_file(media_manifest) if media_manifest.exists() else None
     if current != manifest["mediaManifestSha256"]:
         raise ValueError("Media changed since normalization; rebuild required")
     media_map = load_media_map(archive_dir)
-    summary = json.loads((archive_dir / "raw" / "acquisition_summary.json").read_text(encoding="utf-8"))
+    summary = json.loads(archive_member(archive_dir, "raw/acquisition_summary.json").read_text(encoding="utf-8"))
     return {"status": summary["status"], "verifiedMedia": len(media_map), "verifiedOutputFiles": len(OUTPUTS)}
+
+
+def csv_cell(value):
+    if isinstance(value, str):
+        index = 0
+        while index < len(value) and (
+            value[index].isspace() or unicodedata.category(value[index]) in {"Cc", "Cf"}
+        ):
+            index += 1
+        if unicodedata.normalize("NFKC", value[index:index + 1]) in {"=", "+", "-", "@"}:
+            return "'" + value
+    return value
 
 
 def main():
@@ -357,21 +381,33 @@ def main():
         print(f"NV {project_nv() or 'unavailable'}")
     if len(sys.argv) == 3:
         try:
-            result = verify_export(archive_dir)
+            with manifest_lock(archive_dir):
+                result = verify_export(archive_dir)
             print(json.dumps(result))
             return 0 if result["status"] in ("PASS", "PASS WITH WARNINGS") else 1
         except (OSError, ValueError, KeyError, TypeError):
             print(json.dumps({"status": "FAIL", "reason": "export receipt or byte validation failed"}))
             return 1
-    raw_path = archive_dir / "raw" / "dom_snapshots.json"
-    if not raw_path.is_file():
-        print(f"error: missing {raw_path}", file=sys.stderr)
-        return 2
     try:
-        data = json.loads(raw_path.read_text(encoding="utf-8"))
+        raw_path = archive_member(archive_dir, "raw/dom_snapshots.json")
+        if not raw_path.is_file():
+            print("error: missing acquisition file", file=sys.stderr)
+            return 2
+        with manifest_lock(archive_dir):
+            return export_archive(archive_dir, raw_path)
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        print(f"error: archive export failed: {type(exc).__name__}", file=sys.stderr)
+        return 2
+
+
+def export_archive(archive_dir, raw_path):
+    try:
+        raw_bytes = raw_path.read_bytes()
+        acquisition_digest = hashlib.sha256(raw_bytes).hexdigest()
+        data = json.loads(raw_bytes)
         exported_at, snapshot, rows, media, non_exportable = extract_messages(data, archive_dir)
     except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-        print(f"error: invalid acquisition data: {exc}", file=sys.stderr)
+        print(f"error: invalid acquisition data: {type(exc).__name__}", file=sys.stderr)
         return 2
     if not rows:
         print("error: no messages or visible chat items were extracted", file=sys.stderr)
@@ -397,22 +433,22 @@ def main():
         "audios_saved": sum(1 for m in media if m["kind"] == "audio"),
         "albums": sum(1 for n in non_exportable if n["type"] == "album"),
         "snapshot_count_reconciled": snapshot["reconciledSnapshotCount"],
-        "acquisition_sha256": digest_file(raw_path),
+        "acquisition_sha256": acquisition_digest,
         "media_byte_representation": "browser-served bytes; original sender upload not asserted",
         "message_id_representation": "local synthetic sequence/content ID; not a native Grindr message ID",
         "datetime_representation": "years inferred backward from export date and visible chat order; original date labels retained",
     }
-    (archive_dir / "messages.json").write_text(json.dumps({"metadata": metadata, "messages": rows, "media": media, "nonExportable": non_exportable}, ensure_ascii=False, indent=2), encoding="utf-8")
-    with (archive_dir / "messages.csv").open("w", newline="", encoding="utf-8") as fh:
+    write_private_text(archive_dir / "messages.json", json.dumps({"metadata": metadata, "messages": rows, "media": media, "nonExportable": non_exportable}, ensure_ascii=False, indent=2))
+    with private_output(archive_dir / "messages.csv") as fh:
         writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows({name: csv_cell(value) for name, value in row.items()} for row in rows)
     media_by_message = {}
     for item in media:
         media_by_message.setdefault(item["message_id"], []).append(item)
     integrity, fk = write_sqlite(archive_dir / "archive.sqlite", metadata, rows, media, non_exportable)
     write_viewer(archive_dir / "index.html", metadata, rows, media_by_message, non_exportable)
-    (archive_dir / "README.md").write_text(f"""# Grindr chat archive
+    write_private_text(archive_dir / "README.md", f"""# Grindr chat archive
 
 Chat: {chat_name}
 Exported: {exported_at}
@@ -428,7 +464,7 @@ Albums: {metadata['albums']}
 - index.html: offline searchable chat viewer.
 - archive.sqlite: canonical SQLite export.
 - messages.json: canonical JSON export.
-- messages.csv: flat message list.
+- messages.csv: flat message list with formula-like cells prefixed to keep them literal in spreadsheet readers.
 - media/objects/: content-addressed local media bytes when normally accessible.
 - raw/: acquisition and validation metadata.
 
@@ -437,7 +473,7 @@ Albums: {metadata['albums']}
 Years in derived datetime values are inferred backward from the export date and visible chat order. Original date labels and message order are preserved; inferred years are not native Grindr timestamps.
 
 Media marked non-exportable was visible or referenced in Grindr Web but could not be saved through normal browser/page asset access. No ephemeral/view-once, anti-capture, login/session, cookie, or API protections were bypassed.
-""", encoding="utf-8")
+""")
     with (archive_dir / "messages.csv").open(newline="", encoding="utf-8") as fh:
         csv_count = sum(1 for _ in csv.DictReader(fh))
     db = sqlite3.connect(archive_dir / "archive.sqlite")
@@ -454,7 +490,8 @@ Media marked non-exportable was visible or referenced in Grindr Web but could no
     ]
     checks = {
         "snapshot_continuity": "PASS" if snapshot["snapshotContinuityVerified"] else "FAIL",
-        "capture_finished": "PASS" if data.get("acquisitionSchemaVersion") != 2 or (
+        "capture_finished": "PASS" if data.get("acquisitionSchemaVersion") in (None, 1) or (
+            data.get("acquisitionSchemaVersion") == 2 and
             data.get("acquisitionComplete") is True and data.get("completionEvidence", {}).get("newestReached") is True
             and snapshot.get("startMarkerPresent")) else "FAIL",
         "history_start_verified": "PASS" if history_start_verified(data, snapshot) else "FAIL",
@@ -487,9 +524,9 @@ Media marked non-exportable was visible or referenced in Grindr Web but could no
     else:
         status = "PASS"
     summary = {"status": status, "archiveDir": str(archive_dir), "metadata": {**metadata, "sender_counts": dict(sender_counts)}, "nonExportable": non_exportable, "checks": checks}
-    (archive_dir / "raw" / "acquisition_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    write_export_manifest(archive_dir)
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    write_private_text(raw_path.parent / "acquisition_summary.json", json.dumps(summary, ensure_ascii=False, indent=2))
+    write_export_manifest(archive_dir, acquisition_digest)
+    print(json.dumps({"status": status, "messages": len(rows), "checks": checks}))
     return 0 if status in ("PASS", "PASS WITH WARNINGS") else 1
 
 

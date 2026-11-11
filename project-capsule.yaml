@@ -218,7 +218,7 @@ references:
   c2: Historical-only /home/daniele/projects/codex-roadmap/roadmap.sqlite; no lifecycle
     writes or dispatcher use.
 freshness:
-  reviewed_commit: 6e2c949f6678ae7a0074a9e2484a195ac1fdcd0f
+  reviewed_commit: 13bf434f7933f969dea5cdd606219a469daba330
   watch_paths:
   - grindr_dom_archive.py
   - grindr_media.py
